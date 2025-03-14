@@ -4,9 +4,10 @@ from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 import openai
 from models import db, User
+import requests
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app = Flask(__name__, static_folder='frontend/my-app/build', static_url_path='/')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://username:password@localhost/dbname'
 app.config['SECRET_KEY'] = 'your_secret_key'
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -31,13 +32,13 @@ def get_response(query):
 
 @app.route('/')
 def index():
-    return app.send_static_file('build/index.html')
+    return app.send_static_file('index.html')
 
 @app.route('/<path:path>')
 def catch_all(path):
     if path.startswith('static'):
         return app.send_static_file(path)
-    return app.send_static_file('build/index.html')
+    return app.send_static_file('index.html')
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -75,6 +76,31 @@ def logout():
 @login_required
 def secure_data():
     return jsonify({'data': 'This is secured data accessible only to authenticated users'}), 200
+
+@app.route('/loan-eligibility', methods=['POST'])
+def loan_eligibility():
+    data = request.get_json()
+    # Logic to fetch loan eligibility from banking API
+    response = requests.post('https://bankingapi.com/eligibility', json=data)
+    return jsonify(response.json())
+
+@app.route('/financial-tips', methods=['GET'])
+def financial_tips():
+    # Logic to fetch financial tips
+    tips = ["Save regularly", "Invest wisely", "Track your expenses"]
+    return jsonify({'tips': tips})
+
+@app.route('/translate', methods=['POST'])
+def translate():
+    data = request.get_json()
+    query = data['query']
+    target_language = data['target_language']
+    response = requests.post('https://translation.googleapis.com/language/translate/v2', params={
+        'q': query,
+        'target': target_language,
+        'key': 'your_google_translate_api_key'
+    })
+    return jsonify(response.json()['data']['translations'][0]['translatedText'])
 
 if __name__ == "__main__":
     app.run(debug=True)
